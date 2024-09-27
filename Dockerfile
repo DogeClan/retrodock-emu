@@ -3,10 +3,13 @@ FROM ubuntu:20.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
+ENV XDG_RUNTIME_DIR=/tmp/runtime-dir
 
-# Update package list and install RetroArch and other necessary packages
+# Create the XDG_RUNTIME_DIR
+RUN mkdir -p ${XDG_RUNTIME_DIR}
+
+# Update package list and install required packages
 RUN apt-get update && \
-    apt-get upgrade --yes && \
     apt-get install --yes \
     retroarch \
     xvfb \
@@ -15,32 +18,36 @@ RUN apt-get update && \
     supervisor \
     python3 \
     python3-pip \
-    libasound2-dev \  # Install only libasound2-dev for ALSA support
+    libasound2-dev \
+    x11vnc \ 
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Create directories for noVNC and RetroArch
 RUN mkdir -p /usr/share/novnc /var/run/retroarch
 
-# Add start script
+# Create start script
 RUN echo '#!/bin/bash\n\n\
 # Start Xvfb\n\
-Xvfb :1 -screen 0 1280x720x24 &\n\
+Xvfb :1 -screen 0 1280x720x24 -extension RANDR &\n\
 sleep 2  # Give Xvfb time to start\n\
 \n\
 # Set the DISPLAY variable for RetroArch\n\
 export DISPLAY=:1\n\
 \n\
+# Start x11vnc to export the Xvfb display to VNC\n\
+x11vnc -display :1 -nopw -forever -many -listen localhost -rfbport 5901 &\n\
+\n\
 # Start RetroArch - replace with specific command line options you need\n\
 retroarch &\n\
 \n\
-# Start noVNC\n\
-websockify --web=/usr/share/novnc 6080 localhost:5901 &\n\
+# Start noVNC with a longer timeout\n\
+websockify --web=/usr/share/novnc 6080 localhost:5901 --timeout=3600 &\n\
 \n\
 # Keep the script running\n\
 wait -n' > /start.sh && chmod +x /start.sh
 
-# Set working directory
+# Set the working directory
 WORKDIR /usr/share/novnc
 
 # Expose the noVNC port
