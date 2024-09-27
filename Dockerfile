@@ -1,44 +1,23 @@
-# Use a base image with the required dependencies
+# Start with a minimal Ubuntu base image
 FROM ubuntu:20.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install necessary packages
+# Update package list and install RetroArch and other necessary packages
 RUN apt-get update && \
-    apt-get install -y \
-    build-essential \
-    git \
-    cmake \
-    libx11-dev \
-    libxext-dev \
-    libxrender-dev \
-    libxrandr-dev \
-    libxinerama-dev \
-    libxcb1-dev \
-    libxkbcommon-dev \
-    libalsa-oss-dev \
-    libpulse-dev \
-    libgtk-3-dev \
-    libglib2.0-dev \
+    apt-get upgrade --yes && \
+    apt-get install --yes \
+    retroarch \
     xvfb \
     novnc \
     websockify \
     supervisor \
     python3 \
     python3-pip \
-    wget && \
-    apt-get clean && \
+    libasound2-dev \  # Install only libasound2-dev for ALSA support
+    && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Clone RetroArch repository
-RUN git clone --depth=1 https://github.com/libretro/RetroArch.git /retroarch
-
-# Build RetroArch
-RUN cd /retroarch && \
-    ./configure --enable-x11 --enable-opengl --enable-alsa && \
-    make -j$(nproc) && \
-    make install
 
 # Create directories for noVNC and RetroArch
 RUN mkdir -p /usr/share/novnc /var/run/retroarch
